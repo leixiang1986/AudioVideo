@@ -10,10 +10,11 @@
 #import <AVFoundation/AVFoundation.h>
 
 
-@interface ViewController ()<AVCaptureVideoDataOutputSampleBufferDelegate>
-@property (nonatomic, strong) AVCaptureSession *session;
-@property (nonatomic, strong) AVCaptureVideoPreviewLayer *previewLayer;
+@interface ViewController ()<AVCaptureVideoDataOutputSampleBufferDelegate,AVCaptureAudioDataOutputSampleBufferDelegate,AVCaptureFileOutputRecordingDelegate>
+@property (nonatomic, strong) AVCaptureSession *session;  //previewLayer中引用
+@property (nonatomic, weak) AVCaptureVideoPreviewLayer *previewLayer;
 @property (nonatomic, weak) AVCaptureDeviceInput *videoInput;
+@property (nonatomic, weak) AVCaptureMovieFileOutput *fileOutput;
 @end
 
 @implementation ViewController
@@ -27,32 +28,55 @@
 
 - (IBAction)startCapture:(id)sender {
     self.session = [[AVCaptureSession alloc] init];
-    
-//    [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL granted) {
-//
-//    }];
-//    if (status != AVAuthorizationStatusAuthorized) {
-//        NSLog(@"没有取得授权");
-//    }
-    //创建设备
+        //创建设备
     AVCaptureDevice *device  = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
     
     //创建输入,添加输入
     NSError *error = nil;
     AVCaptureDeviceInput *deviceInput = [AVCaptureDeviceInput deviceInputWithDevice:device error:&error];
-    if (![_session canAddInput:deviceInput]) {
+    if (![_session canAddInput:deviceInput] || error != nil) {
         NSLog(@"无法加入输入源");
         return;
     }
     [_session addInput:deviceInput];
     _videoInput = deviceInput;
     
+    AVCaptureDevice *audioDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeAudio];
+    AVCaptureDeviceInput *audioInput = [AVCaptureDeviceInput deviceInputWithDevice:audioDevice error:&error];
+    if (![_session canAddInput:audioInput] || error != nil) {
+        NSLog(@"添加音频输入失败");
+        return;
+    }
+    [_session addInput:audioInput];
+    
     //添加输出
+    AVCaptureMovieFileOutput *fileOutput = [[AVCaptureMovieFileOutput alloc] init];
+    if (![_session canAddOutput:fileOutput]) {
+        NSLog(@"不能添加文件输出");
+        return ;
+    }
+    [_session addOutput:fileOutput];
+    self.fileOutput = fileOutput;
+    AVCaptureConnection *connection = [fileOutput connectionWithMediaType:AVMediaTypeVideo];
+    connection.preferredVideoStabilizationMode = AVCaptureVideoStabilizationModeAuto;
+    
+    //视频输出
     AVCaptureVideoDataOutput *output = [[AVCaptureVideoDataOutput alloc] init];
     [output setSampleBufferDelegate:self queue:dispatch_get_global_queue(0, 0   )];
-    if ([_session canAddOutput:output]) {
-        [_session addOutput:output];
+    if (![_session canAddOutput:output]) {
+        NSLog(@"不能添加视频输出");
+        return;
     }
+    [_session addOutput:output];
+    
+    //音频输出
+    AVCaptureAudioDataOutput *audioOutput = [[AVCaptureAudioDataOutput alloc] init];
+    [audioOutput setSampleBufferDelegate:self queue:dispatch_get_global_queue(0, 0)];
+    if (![_session canAddOutput:audioOutput]) {
+        NSLog(@"不能添加音频输出");
+        return;
+    }
+    [_session addOutput:audioOutput];
     
     //添加预览图层
     [self.previewLayer removeFromSuperlayer];
@@ -66,12 +90,25 @@
     self.previewLayer = prelayer;
     
     [_session startRunning];
+    
+    NSString *path = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject stringByAppendingPathComponent:@"abc.mp4"];
+    NSURL *url = [NSURL fileURLWithPath:path];
+    [fileOutput startRecordingToOutputFileURL:url recordingDelegate:self];
+    
+    
+    
 }
 
 - (IBAction)reverseLens:(id)sender {
     if (_videoInput == nil) {
         return;
     }
+    
+    CATransition *animation = [[CATransition alloc] init];
+    animation.type = @"oglFlip";
+    animation.subtype = @"fromLeft";
+    animation.duration = 0.5;
+    [self.view.layer addAnimation:animation forKey:nil];
     
     //获取之前的镜头
     AVCaptureDevicePosition position = _videoInput.device.position;
@@ -98,6 +135,7 @@
 
 
 - (IBAction)stopCapture:(id)sender {
+    [_fileOutput stopRecording];
     [_session stopRunning];
     [_previewLayer removeFromSuperlayer];
     _session = nil;
@@ -133,10 +171,23 @@
 #endif
 
 #pragma mark - delegate
-
+//音视频的代理方法
 - (void)captureOutput:(AVCaptureOutput *)output didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection {
-    NSLog(@"捕捉到帧数据");
+
+    if ([output connectionWithMediaType:AVMediaTypeVideo] == connection) {
+        NSLog(@"视频帧数据");
+    } else {
+        NSLog(@"音频数据");
+    }
 }
 
+//写入文件的代理方法
+- (void)captureOutput:(AVCaptureFileOutput *)output didStartRecordingToOutputFileAtURL:(NSURL *)fileURL fromConnections:(NSArray<AVCaptureConnection *> *)connections {
+    NSLog(@"开始了写入%@",[fileURL absoluteString]);
+}
+
+- (void)captureOutput:(AVCaptureFileOutput *)output didFinishRecordingToOutputFileAtURL:(NSURL *)outputFileURL fromConnections:(NSArray<AVCaptureConnection *> *)connections error:(NSError *)error {
+    NSLog(@"完成了写入%@:%@",error,[outputFileURL absoluteString]);
+}
 
 @end
