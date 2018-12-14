@@ -19,7 +19,8 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
-        
+    _imageView.contentMode = UIViewContentModeScaleToFill;
+    _imageView.image = [UIImage imageNamed:@"test"];
     
 }
 
@@ -42,6 +43,7 @@
     [picture processImage];
     
     _imageView.image = filter.imageFromCurrentFramebuffer;
+    
 }
 - (IBAction)sketchFilter:(id)sender {
     GPUImageSketchFilter *filter = [[GPUImageSketchFilter alloc] init];
