@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0467CAA621C77B1D0047D386 /* 123.h264 in Resources */ = {isa = PBXBuildFile; fileRef = 0467CAA521C77B1D0047D386 /* 123.h264 */; };
 		04FEF25321C5F73D007241D4 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 04FEF25221C5F73D007241D4 /* AppDelegate.m */; };
 		04FEF25621C5F73D007241D4 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 04FEF25521C5F73D007241D4 /* ViewController.m */; };
 		04FEF25921C5F73D007241D4 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 04FEF25721C5F73D007241D4 /* Main.storyboard */; };
@@ -36,6 +37,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0467CAA521C77B1D0047D386 /* 123.h264 */ = {isa = PBXFileReference; lastKnownFileType = file; path = 123.h264; sourceTree = "<group>"; };
 		04FEF24E21C5F73D007241D4 /* HardDecoderDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HardDecoderDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		04FEF25121C5F73D007241D4 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		04FEF25221C5F73D007241D4 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -104,6 +106,7 @@
 		04FEF25021C5F73D007241D4 /* HardDecoderDemo */ = {
 			isa = PBXGroup;
 			children = (
+				0467CAA521C77B1D0047D386 /* 123.h264 */,
 				04FEF2C421C65331007241D4 /* AAPLEAGLLayer.h */,
 				04FEF2C521C65343007241D4 /* AAPLEAGLLayer.m */,
 				04FEF25121C5F73D007241D4 /* AppDelegate.h */,
@@ -240,6 +243,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0467CAA621C77B1D0047D386 /* 123.h264 in Resources */,
 				04FEF25E21C5F73E007241D4 /* LaunchScreen.storyboard in Resources */,
 				04FEF25B21C5F73E007241D4 /* Assets.xcassets in Resources */,
 				04FEF25921C5F73D007241D4 /* Main.storyboard in Resources */,

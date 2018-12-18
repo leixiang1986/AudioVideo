@@ -59,50 +59,61 @@ const char startCode[] = "\x00\x00\x00\x01";
 }
 
 - (void)updateFrame {
+//    dispatch_sync(self.queue, ^{
+        //读取一个NALU的数据
+        [self readPacket];
+        
+        if (packetSize == 0 || packetBuffer == NULL) {
+            [self.displayLink setPaused:YES];
+            [self.displayLink invalidate];
+            [self.inputStream close];
+            return;
+        }
+        
+        //根据数据的类型进行不同的处理
+        //sps/pps/i帧/其他帧
+        uint32_t nalSize = (uint32_t)(packetSize - 4);
+        uint32_t *pNalSize = (uint32_t *)packetBuffer;
+        *pNalSize = CFSwapInt32HostToBig(nalSize);
+        
+        int nalType = packetBuffer[4] & 0x1F;
+        CVImageBufferRef imageBuffer = NULL;
+        switch (nalType) {
+            case 0x07:
+                mSPSSize = packetSize - 4;
+                mSPS = calloc(1, mSPSSize);
+                memcpy(mSPS, packetBuffer + 4, mSPSSize);
+                break;
+            case 0x08:
+                mPPSSize = packetSize - 4;
+                mPPS = calloc(1, mPPSSize);
+                memcpy(mPPS, packetBuffer + 4, mPPSSize);
+                break;
+            case 0x05:
+                [self initDecompressionsession];
+                imageBuffer = [self decodeFrame];
+            default:
+                imageBuffer = [self decodeFrame];
+                break;
+        }
     
-    //读取一个NALU的数据
-    [self readPacket];
+//    switch (nalType) {
+//        case 0x07:
+//            free(mSPS);
+//            break;
+//        case 0x08:
+//            free(mPPS);
+//            break;
+//        default:
+//            break;
+//    }
     
-    if (packetSize == 0 || packetBuffer == NULL) {
-        [self.displayLink setPaused:YES];
-        [self.displayLink invalidate];
-        [self.inputStream close];
-        return;
-    }
-    
-    //根据数据的类型进行不同的处理
-    //sps/pps/i帧/其他帧
-    uint32_t nalSize = (uint32_t)(packetSize - 4);
-    uint32_t *pNalSize = (uint32_t *)packetBuffer;
-    *pNalSize = CFSwapInt32HostToBig(nalSize);
-    
-    int nalType = packetBuffer[4] & 0x1F;
-    CVImageBufferRef imageBuffer = NULL;
-    switch (nalType) {
-        case 0x07:
-            mSPSSize = packetSize - 4;
-            mSPS = calloc(1, mSPSSize);
-            memcpy(mSPS, packetBuffer + 4, mSPSSize);
-            break;
-        case 0x08:
-            mPPSSize = packetSize - 4;
-            mPPS = calloc(1, mPPSSize);
-            memcpy(mPPS, packetBuffer + 4, mPPSSize);
-            break;
-        case 0x05:
-            [self initDecompressionsession];
-            imageBuffer = [self decodeFrame];
-        default:
-            imageBuffer = [self decodeFrame];
-            break;
-    }
-    
-    if (imageBuffer != NULL) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            self.previewLayer.pixelBuffer = imageBuffer;
-            CFRelease(imageBuffer);
-        });
-    }
+        if (imageBuffer != NULL) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                self.previewLayer.pixelBuffer = imageBuffer;
+                CFRelease(imageBuffer);
+            });
+        }
 }
 
 - (void)initDecompressionsession {
@@ -138,7 +149,7 @@ const char startCode[] = "\x00\x00\x00\x01";
     
     //开始解码
     CVPixelBufferRef outputPixelBuffer = NULL;
-    VTDecompressionSessionDecodeFrame(_session, sampleBuffer, 0, &outputPixelBuffer, NULL);
+    VTDecompressionSessionDecodeFrame(self.session, sampleBuffer, 0, &outputPixelBuffer, NULL);
     
     CFRelease(sampleBuffer);
     CFRelease(blockBuffer);
@@ -149,10 +160,8 @@ const char startCode[] = "\x00\x00\x00\x01";
 
 - (void)readPacket {
     //将之前保存的数据清空
-    if (packetSize != 0) {
+    if (packetSize != 0 || packetBuffer != NULL) {
         packetSize = 0;
-    }
-    if (packetBuffer != NULL) {
         free(packetBuffer);
         packetBuffer = NULL;
     }
@@ -194,6 +203,7 @@ void decompressionCallback(void * CM_NULLABLE decompressionOutputRefCon,
     CVPixelBufferRef *pointer = (CVPixelBufferRef *)sourceFrameRefCon;
     *pointer = CVBufferRetain(imageBuffer);
 }
+
 - (IBAction)play:(id)sender {
     // 1.对定义的长度进行赋值
     maxReadLength = 720 * 1280;
